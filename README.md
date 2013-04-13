@@ -1,4 +1,5 @@
-= Goxtone =
+Goxtone
+=======
 
 Having to keep watch of a price can trouble your mind.
 
