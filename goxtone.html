@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+<script src="https://socketio.mtgox.com/socket.io/socket.io.js"></script>
+<script>
+// Mt. Gox params
+var multiplier = 3
+  , tradeLimit = .5
+  , fiatCurrency = 'USD'
+  , coinCurrency = 'BTC';
+
+// status vars
+var noteOn = false
+  , lastPrice;
+
+// sound setup
+var context = new webkitAudioContext(),
+    oscillator = context.createOscillator();
+
+oscillator.connect(context.destination);
+
+// start streaming trading info
+var conn = io.connect('https://socketio.mtgox.com/mtgox');
+
+conn.on('message', function(data) {
+    var trade;
+
+    if (
+      data.trade != undefined
+      && data.trade.item == coinCurrency
+      && data.trade.amount > parseFloat(tradeLimit)
+      && data.trade.price_currency == fiatCurrency
+    ) {
+      if (!noteOn) {
+        oscillator.noteOn(0);
+        noteOn = true;
+      }
+
+      trade = data.trade;
+
+      lastPrice = trade.price;
+      $('#price').text(lastPrice);      
+      $('#amount').text(trade.amount);      
+
+      oscillator.frequency.value = (trade.price * multiplier);
+    }
+});
+
+// activate UI
+$(function(){
+  $('#current_multiplier').val(multiplier);
+
+  function updateMultiplier(newMultiplier) {
+    multiplier = newMultiplier;
+    $('#current_multiplier').val(multiplier);
+    $('#multiplier').val(multiplier);
+    oscillator.frequency.value = (lastPrice * multiplier);
+  }
+
+  $('#multiplier').change(function() {
+    updateMultiplier($(this).val());
+  });
+
+  $('#current_multiplier').change(function() {
+    updateMultiplier($(this).val());
+  });
+});
+</script>
+<body>
+  <h1>Price: <span id='price'>(waiting...)</span></h1>
+  <p>Amount: <span id='amount'></span></p>
+
+  <p>
+    Tone multiplier: <input id="multiplier" type="range" min="0" max="5" step=".1" />
+     <input id='current_multiplier' size='2' />
+  </p>
+
+</body>
+</html>
