@@ -3,8 +3,9 @@
 <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
 <script src="https://socketio.mtgox.com/socket.io/socket.io.js"></script>
 <script>
-// Mt. Gox params
+// User settings
 var multiplier = 3
+  , toneAdjust = 0
   , tradeLimit = .5
   , fiatCurrency = 'USD'
   , coinCurrency = 'BTC';
@@ -25,6 +26,12 @@ var conn = io.connect('https://socketio.mtgox.com/mtgox');
 conn.on('message', function(data) {
     var trade;
 
+    // indicate data received
+    $('#activity').show();
+    setTimeout(function() {
+      $('#activity').hide();
+    }, 100);
+
     if (
       data.trade != undefined
       && data.trade.item == coinCurrency
@@ -42,19 +49,22 @@ conn.on('message', function(data) {
       $('#price').text(lastPrice);      
       $('#amount').text(trade.amount);      
 
-      oscillator.frequency.value = (trade.price * multiplier);
+      oscillator.frequency.value = (lastPrice * multiplier) + parseFloat(toneAdjust);
     }
 });
 
 // activate UI
 $(function(){
+  // set initial values
   $('#current_multiplier').val(multiplier);
+  $('#current_tone_adjust').val(toneAdjust);
 
+  // deal with changes to multiplier
   function updateMultiplier(newMultiplier) {
     multiplier = newMultiplier;
     $('#current_multiplier').val(multiplier);
     $('#multiplier').val(multiplier);
-    oscillator.frequency.value = (lastPrice * multiplier);
+    oscillator.frequency.value = (lastPrice * multiplier) + parseFloat(toneAdjust);
   }
 
   $('#multiplier').change(function() {
@@ -64,15 +74,39 @@ $(function(){
   $('#current_multiplier').change(function() {
     updateMultiplier($(this).val());
   });
+
+  // deal with changes to adjustment
+  function updateToneAdjust(newAdjust) {
+    toneAdjust = newAdjust;
+    $('#current_tone_adjust').val(toneAdjust);
+    $('#tone_adjust').val(toneAdjust);
+    oscillator.frequency.value = (lastPrice * multiplier) + parseFloat(toneAdjust);
+  }
+
+  $('#tone_adjust').change(function() {
+    updateToneAdjust($(this).val());
+  });
+
+  $('#current_tone_adjust').change(function() {
+    updateToneAdjust($(this).val());
+  });
 });
 </script>
 <body>
-  <h1>Price: <span id='price'>(waiting...)</span></h1>
+
+  <div id='activity' style='float: right; margin-right: 10px; display: none; color: red;'>Data...</div>
+
+  <h1>Price: <span id='price'>(waiting for price)</span></h1>
   <p>Amount: <span id='amount'></span></p>
 
   <p>
     Tone multiplier: <input id="multiplier" type="range" min="0" max="5" step=".1" />
      <input id='current_multiplier' size='2' />
+  </p>
+
+  <p>
+    Tone adjust: <input id="tone_adjust" type="range" min="-150" max="150" step=".1" />
+     <input id='current_tone_adjust' size='5' />
   </p>
 
   <p>
